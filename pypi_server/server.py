@@ -6,6 +6,7 @@ from tornado.web import RequestHandler, StaticFileHandler, Application
 import tornado.options
 
 from settings import pkg_dir, Template
+from utils import find_package
 
 tornado.options.parse_command_line()
 
@@ -19,10 +20,7 @@ class MainPageHandler(RequestHandler):
 class PackageHandler(RequestHandler):
     def get(self, pkg_name, *args, **kwargs):
         links = []
-        for filename in os.listdir(pkg_dir):
-            print pkg_name, filename
-            if pkg_name.lower() in filename.lower():
-                links.append(filename)
+        links = find_package(pkg_name)
         html = Template('package.html').render(links=links)
         self.write(html)
 
