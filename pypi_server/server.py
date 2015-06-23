@@ -4,16 +4,14 @@ from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, Application
 
-from settings import pkg_dir, template_dir
+from settings import pkg_dir, Template
 
 class MainPageHandler(RequestHandler):
     def get(self, *args, **kwargs):
         names = os.listdir(pkg_dir)
         href = '<a href="/"> {} </a><br>'
         content = '\n'.join(href.format(name) for name in names)
-        template_file = os.path.join(template_dir, 'index.html')
-        with open(template_file) as f:
-            html = f.read().format(content=content)
+        html = Template('index.html').render(content=content)
         self.write(html)
 
 
