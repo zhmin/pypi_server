@@ -20,8 +20,9 @@ class MainPageHandler(RequestHandler):
 class PackageHandler(RequestHandler):
     def get(self, pkg_name, *args, **kwargs):
         links = []
-        links = find_package(pkg_name)
-        html = Template('package.html').render(links=links)
+        pkgs = find_package(pkg_name)
+        context = {'package_name': pkg_name, 'links': pkgs}
+        html = Template('package.html').render(**context)
         self.write(html)
 
 
@@ -29,7 +30,7 @@ def main():
     app = Application([
         (r"/simple/?", MainPageHandler),
         (r"/simple/([^/\s]+)/?", PackageHandler),
-        (r"/package/([^/\s]+)/?", StaticFileHandler, {'path': pkg_dir}), 
+        (r"/package/(.*)", StaticFileHandler, {'path': pkg_dir}), 
         ],
         {'debug': True,
         'log_file_prefix': './log/',
