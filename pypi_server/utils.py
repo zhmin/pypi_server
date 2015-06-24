@@ -1,4 +1,5 @@
 import os
+import collections
 import md5
 from settings import pkg_dir, pkg_href_prefix
 
@@ -31,9 +32,23 @@ class Package(object):
 
     @property
     def md5_value(self):
-        return md5_file(self.path)
+        return md5_cache[self.path]
 
     
-def md5_file(filepath):
-    with open(filepath) as f:
-        return md5.new(f.read()).hexdigest()
+
+class Md5Cache(dict):
+    def __init__(self, size):
+        super(Md5Cache, self).__init__()
+        self.size = size
+        self.queue = collections.deque()
+
+    def __missing__(self, key):
+        with open(key) as f:
+            self[key] = md5.new(f.read()).hexdigest()
+        self.queue.append(key)
+        if len(self.queue) > self.size:
+            remove_key = self.queue.popleft()
+            del self[remove_key]
+        return self[key]
+        
+md5_cache = Md5Cache(100)
