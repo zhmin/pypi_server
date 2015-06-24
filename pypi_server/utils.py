@@ -1,4 +1,5 @@
 import os
+import re
 import posixpath
 import collections
 import md5
@@ -72,11 +73,18 @@ def parse_pkg_version(url, search_name):
         return None
 
 #tar.gz must be below tar
-SUPPORTED_EXTENSIONS = ['tar.gz']
+SUPPORTED_EXTENSIONS = ['.tar.gz']
 
 def split_package_name(name):
     for ext in SUPPORTED_EXTENSIONS:
         if name.endswith(ext):
-            return name[:len(ext)], ext
+            return name[:-len(ext)], ext
     return name, None
     
+def ensure_dir(dirpath):
+    if not os.path.exists(dirpath):
+        os.mkdirs(dirpath)
+
+if __name__ == "__main__":
+    url = u'https://pypi.python.org/../packages/source/F/Flask/Flask-0.8.tar.gz#md5=a5169306cfe49b3b369086f2a63816ab'
+    print parse_pkg_version(url, 'flask')
