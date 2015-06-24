@@ -3,7 +3,7 @@
             <title>Link for {{ package_name  }}</title>
         </head>
         <body>
-            <h1>Package</h1>
+            <h1>{{ package_name }}</h1>
             {% for p in links %}
                  <a href="{{ p.link }}">{{ p.filename }}</a><br>
             {% endfor %}
