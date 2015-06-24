@@ -1,4 +1,5 @@
 import os
+import md5
 from settings import pkg_dir, pkg_href_prefix
 
 
@@ -26,5 +27,13 @@ class Package(object):
 
     @property
     def link(self):
-        return pkg_href_prefix + os.path.join(self.pkg_name, self.filename)
+        return pkg_href_prefix + os.path.join(self.pkg_name, self.filename) + '#' + self.md5_value
+
+    @property
+    def md5_value(self):
+        return md5_file(self.path)
+
     
+def md5_file(filepath):
+    with open(filepath) as f:
+        return md5.new(f.read()).hexdigest()
