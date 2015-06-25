@@ -7,7 +7,7 @@ import tornado.options
 
 from settings import pkg_dir, Template
 from utils import find_package
-from download import HTMLPage
+from download import HTMLPage, download_package
 
 tornado.options.parse_command_line()
 
@@ -35,7 +35,12 @@ class Downloadhandler(RequestHandler):
 
         if not packages:
             page = HTMLPage.from_package_name(pkg_name)
-            self.write({'version': page.versions})
+            link = page.find_link(version)
+            if link:
+                download_package(link)
+                self.write({'download': link.basename})
+            else:
+                self.write({'version': page.versions})
         else:
             self.write({'status': 'find'})
 

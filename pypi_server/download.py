@@ -32,10 +32,9 @@ class HTMLPage(object):
     def versions(self):
         return [l.version for l in self.links if l.version]
 
-    @property
-    def link(self):
+    def find_link(self, version):
         for l in self.links:
-            if l.version == self.version:
+            if l.version == version:
                 return l
         return None
         
@@ -44,8 +43,6 @@ class HTMLPage(object):
         url = urlparse.urljoin(PYPI_SERVER, pkg_name)
         content = requests.get(url).content
         return cls(pkg_name, url, content)
-
-
 
 class Link(object):
     def __init__(self, url, pkg_name):
@@ -64,6 +61,15 @@ class Link(object):
     def path(self):
         return urlparse.urlparse(self.url).path
         
+def download_package(link):
+    content = requests.get(link.url).content
+    dirpath = os.path.join(pkg_dir, link.pkg_name)
+    ensure_dir(dirpath)
+    filepath = os.path.join(dirpath, link.basename)
+    with open(filepath, 'wb') as f:
+        f.write(content)
+
+
 if __name__ == "__main__":
     url = urlparse.urljoin(PYPI_SERVER, 'flask')
     page = HTMLPage.from_package_name('flask')
