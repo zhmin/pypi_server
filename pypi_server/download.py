@@ -41,8 +41,10 @@ class HTMLPage(object):
     @classmethod
     def from_package_name(cls, pkg_name):
         url = urlparse.urljoin(PYPI_SERVER, pkg_name)
-        content = requests.get(url).content
-        return cls(pkg_name, url, content)
+        resp = requests.get(url)
+        # url may redirect, so we should use response.url.content 
+        # or urljoin get wrong url
+        return cls(pkg_name, resp.url, resp.content)
 
 class Link(object):
     def __init__(self, url, pkg_name):
@@ -75,3 +77,10 @@ if __name__ == "__main__":
     page = HTMLPage.from_package_name('flask')
     for l in page.links:
         print l.url, l.version
+
+if __name__ == "__main__":
+    url = urlparse.urljoin(PYPI_SERVER, 'flask')
+    page = HTMLPage.from_package_name('flask')
+    link = page.find_link('0.7')
+    resp = requests.get(link.url)
+    print resp.content
