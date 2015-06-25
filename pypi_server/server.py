@@ -7,6 +7,7 @@ import tornado.options
 
 from settings import pkg_dir, Template
 from utils import find_package
+from download import download_package
 
 tornado.options.parse_command_line()
 
@@ -25,12 +26,24 @@ class PackageHandler(RequestHandler):
         html = Template('package.html').render(**context)
         self.write(html)
 
+class Downloadhandler(RequestHandler):
+
+    def get(self, *args, **kwargs):
+        pkg_name = self.get_argument('package')
+        version = self.get_argument('version')
+        packages = find_package(pkg_name, version)
+
+        if not packages:
+            download_package(pkg_name, version)
+        self.write({'status': 'find'})
+
 
 def main():
     app = Application([
         (r"/simple/?", MainPageHandler),
         (r"/simple/([^/\s]+)/?", PackageHandler),
         (r"/package/(.*)", StaticFileHandler, {'path': pkg_dir}), 
+        (r"/download/?", Downloadhandler),
         ],
         {'debug': True,
         'log_file_prefix': './log/',
