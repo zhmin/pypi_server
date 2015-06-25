@@ -64,7 +64,9 @@ egg_info_re = re.compile(r'([\w.]+)-([\w.!+-]+)')
 
 def parse_pkg_version(url, search_name):
     path = urlparse.urlparse(url).path
-    name, _ = split_package_name(posixpath.basename(path.rstrip('/')))
+    name, suffix = split_package_name(posixpath.basename(path.rstrip('/')))
+    if suffix is None:
+        return None
     match = egg_info_re.search(name)
     if not match:
         return None
@@ -87,7 +89,7 @@ def split_package_name(name):
     
 def ensure_dir(dirpath):
     if not os.path.exists(dirpath):
-        os.mkdirs(dirpath)
+        os.makedirs(dirpath)
 
 
 if __name__ == "__main__":
