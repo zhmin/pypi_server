@@ -4,6 +4,7 @@ import urlparse
 import requests
 import html5lib
 from operator import attrgetter
+from tornado.web import HTTPError
 
 from utils import parse_pkg_version, ensure_dir
 from settings import pkg_dir
@@ -64,12 +65,14 @@ class Link(object):
         return urlparse.urlparse(self.url).path
         
 def download_package(link):
-    content = requests.get(link.url).content
+    response = requests.get(link.url)
+    if response.status_code == 404:
+        raise HTTPError(404)
     dirpath = os.path.join(pkg_dir, link.pkg_name)
     ensure_dir(dirpath)
     filepath = os.path.join(dirpath, link.basename)
     with open(filepath, 'wb') as f:
-        f.write(content)
+        f.write(response.content)
 
 
 if __name__ == "__main__":
