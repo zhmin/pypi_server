@@ -1,4 +1,5 @@
 import os
+from multiprocessing import Process
 
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
@@ -37,7 +38,9 @@ class Downloadhandler(RequestHandler):
             page = HTMLPage.from_package_name(pkg_name)
             link = page.find_link(version)
             if link:
-                download_package(link)
+                process = Process(target=download_package, args=(link,))
+                process.daemond = True
+                process.start()
                 self.write({'download': link.basename})
             else:
                 self.write({'version': page.versions})

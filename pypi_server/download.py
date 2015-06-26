@@ -43,7 +43,7 @@ class HTMLPage(object):
     def from_package_name(cls, pkg_name):
         url = urlparse.urljoin(PYPI_SERVER, pkg_name)
         resp = requests.get(url)
-        # url may redirect, so we should use response.url.content 
+        # url may redirect, so we should use response.url
         # or urljoin get wrong url
         return cls(pkg_name, resp.url, resp.content)
 
