@@ -7,3 +7,5 @@ template_dir = 'templates'
 env = Environment(loader=FileSystemLoader(template_dir))
 Template = lambda name: env.get_template(name)
 
+PYPI_SERVER_URL = 'https://pypi.python.org/simple/'
+

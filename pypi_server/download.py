@@ -7,7 +7,6 @@ import html5lib
 from utils import parse_pkg_version, ensure_dir
 from settings import pkg_dir
 
-PYPI_SERVER = 'https://pypi.python.org/simple/' 
 
 class HTMLPage(object):
     def __init__(self, url, content=None):
