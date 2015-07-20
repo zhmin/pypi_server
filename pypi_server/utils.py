@@ -4,6 +4,7 @@ import posixpath
 import collections
 import md5
 import urlparse
+from collections import namedtuple
 from settings import pkg_dir, pkg_href_prefix
 
 
@@ -13,7 +14,15 @@ def find_package(pkg_name):
     if os.path.exists(specify_dir):
         paths = os.listdir(specify_dir)
     return [Package(pkg_name, p) for p in paths] 
-    
+
+PackageInfo = namedtuple('PackageInfo', ['version', 'name', 'md5'])
+
+def parse_pkg_name(pkg_name):
+    version = parse_pkg_version(pkg_name)
+    md5 = ''
+    name = ''
+    return PackageInfo(version, name, md5)
+
     
 class Package(object):
     

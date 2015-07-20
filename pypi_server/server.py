@@ -10,7 +10,7 @@ import tornado.options
 
 from settings import pkg_dir, Template, PYPI_SERVER_URL
 from utils import find_package
-from pypi_page import get_hrefs
+from pypi_page import get_hrefs_from_html
 
 tornado.options.parse_command_line()
 
@@ -25,8 +25,15 @@ class SimplePackageHandler(RequestHandler):
     def get(self, pkg_name):
         pkg_url = urlparse.urljoin(PYPI_SERVER_URL, pkg_name)
         response = requests.get(pkg_url)
-        anchor_tags = get_hrefs(response.content)
-        content = Template('package.html').render(anchor_tags)
+        anchor_tags = get_hrefs_from_html(response.content, exp='*.tar.gz',
+                                        match_type='fnmatch')
+        links = []
+        for anchor in anchor_tags:
+            href = "/package/" + os.path.basename(anchor.href)
+            links.append({'href': href, 'name': anchor.name})
+        
+        content = Template('package.html').render(links=links, package_name=pkg_name)
+        self.write(content)
 
 class PackageHandler(RequestHandler):
     def get(self, pkg_name, *args, **kwargs):

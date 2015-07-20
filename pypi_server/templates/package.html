@@ -4,8 +4,8 @@
         </head>
         <body>
             <h1>{{ package_name }}</h1>
-            {% for p in links %}
-                 <a href="{{ p.link }}">{{ p.name }}</a><br>
+            {% for link in links %}
+                 <a href="{{ link.href }}">{{ link.name }}</a><br>
             {% endfor %}
         </body>
 </html>
