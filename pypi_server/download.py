@@ -74,16 +74,32 @@ def download_package(link):
     with open(filepath, 'wb') as f:
         f.write(response.content)
 
+def download_stream(url):
+    resp = requests.get(url, stream=True)
+    total_length = int(resp.headers['content-length'])
+    recv_length = 0
+    chunk_size = total_length / 1000
+    for chunk in resp.raw.stream(chunk_size):
+        recv_length +=  len(chunk)
+        process = float(recv_length) / total_length
+        print "%2f" % process
+    
 
-if __name__ == "__main__":
+if __name__ == "__main1__":
     url = urlparse.urljoin(PYPI_SERVER, 'flask')
     page = HTMLPage.from_package_name('flask')
     for l in page.links:
         print l.url, l.version
 
-if __name__ == "__main__":
+if __name__ == "__main2__":
     url = urlparse.urljoin(PYPI_SERVER, 'flask')
     page = HTMLPage.from_package_name('flask')
     link = page.find_link('0.7')
     resp = requests.get(link.url)
     print resp.content
+
+
+if __name__ == "__main__":
+    url = 'https://pypi.python.org/packages/source/D/Django/Django-1.7.tar.gz#md5=03edab6828119aa9b32b2252d25eb38d'
+    url = 'http://localhost:8000/package/flask/Flask-0.11.dev0.tar.gz#md5=02bd6fd75596cd591b15d9c55a47d987'
+    download_stream(url)

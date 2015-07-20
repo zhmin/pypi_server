@@ -91,6 +91,15 @@ def ensure_dir(dirpath):
     if not os.path.exists(dirpath):
         os.makedirs(dirpath)
 
+def format_size(bytes):
+    if bytes > 1000 * 1000:
+        return '%.1fMB' % (bytes / 1000.0 / 1000)
+    elif bytes > 10 * 1000:
+        return '%ikB' % (bytes / 1000)
+    elif bytes > 1000:
+        return '%.1fkB' % (bytes / 1000.0)
+    else:
+        return '%ibytes' % bytes
 
 if __name__ == "__main__":
     url = u'https://pypi.python.org/../packages/source/F/Flask/Flask-0.8.tar.gz#md5=a5169306cfe49b3b369086f2a63816ab'
