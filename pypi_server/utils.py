@@ -5,7 +5,9 @@ import collections
 import md5
 import urlparse
 from collections import namedtuple
-from settings import pkg_dir, pkg_href_prefix
+import requests
+from settings import pkg_dir, pkg_href_prefix, PYPI_SERVER_URL
+from pypi_page import get_hrefs_from_html
 
 
 def find_package(pkg_name):
@@ -15,13 +17,19 @@ def find_package(pkg_name):
         paths = os.listdir(specify_dir)
     return [Package(pkg_name, p) for p in paths] 
 
-PackageInfo = namedtuple('PackageInfo', ['version', 'name', 'md5'])
+PackageInfo = namedtuple('PackageInfo', ['name', 'version', 'suffix', 'md5'])
 
 def parse_pkg_name(pkg_name):
-    version = parse_pkg_version(pkg_name)
-    md5 = ''
-    name = ''
-    return PackageInfo(version, name, md5)
+    path, _, encrypt = pkg_name.partition('#')
+    md5 = None
+    if encrypt.startswith('md5='):
+        _, md5 = encrypt.split('=')
+    suffix = None
+    if path.endswith('.tar.gz'):
+        suffix = '.tar.gz'
+        path = path.rstrip('.tar.gz')
+    name, _, version = path.partition('-')
+    return PackageInfo(name, version, suffix, md5)
 
     
 class Package(object):
@@ -96,7 +104,13 @@ def ensure_dir(dirpath):
 
 def extract_pkg_from_pypi(path):
     return os.path.basename(path)
-    
+
+def request_pypi_links(pkg_name, exp='*.tar.gz', match_type='fnmatch'):
+    pkg_url = urlparse.urljoin(PYPI_SERVER_URL, pkg_name)
+    response = requests.get(pkg_url)
+    return get_hrefs_from_html(response.content, exp=exp,
+                                match_type=match_type)
+
 if __name__ == "__main__":
     url = u'https://pypi.python.org/../packages/source/F/Flask/Flask-0.8.tar.gz#md5=a5169306cfe49b3b369086f2a63816ab'
     print parse_pkg_version(url, 'flask')
