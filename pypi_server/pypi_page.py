@@ -56,15 +56,14 @@ class HtmlPageCache(object):
             html = yield self.fetch_impl(name)
             self.cache[name] = {'html': html, 'deadline': time.time() + 24*60*60}
         else:
-            value = self.cache[key]
-            del self.cache[key]
-            self.cache[key] = value
+            value = self.cache[name]
+            del self.cache[name]
+            self.cache[name] = value
         
         if len(self.cache) > self.size:
             self.cache.popitem(last=False)
 
         raise gen.Return(self.cache[name]['html'])
-
     
     @gen.coroutine
     def fetch_impl(self, name):

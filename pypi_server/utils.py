@@ -102,15 +102,6 @@ def ensure_dir(dirpath):
     if not os.path.exists(dirpath):
         os.mkdirs(dirpath)
 
-def extract_pkg_from_pypi(path):
-    return os.path.basename(path)
-
-def request_pypi_links(pkg_name, exp='*.tar.gz', match_type='fnmatch'):
-    pkg_url = urlparse.urljoin(PYPI_SERVER_URL, pkg_name)
-    response = requests.get(pkg_url)
-    return get_hrefs_from_html(response.content, exp=exp,
-                                match_type=match_type)
-
 if __name__ == "__main__":
     url = u'https://pypi.python.org/../packages/source/F/Flask/Flask-0.8.tar.gz#md5=a5169306cfe49b3b369086f2a63816ab'
     print parse_pkg_version(url, 'flask')
