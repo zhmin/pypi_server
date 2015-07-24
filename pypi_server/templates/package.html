@@ -5,7 +5,11 @@
         <body>
             <h1>{{ package_name }}</h1>
             {% for link in links %}
-                 <a href="{{ link.href }}">{{ link.name }}</a><br>
+            	{% if link.is_local %}
+            		<a href="{{ link.href }}" style="color: rgb(321,0,53)">{{ link.name }}</a><br>
+            	{% else %}
+                 	<a href="{{ link.href }}">{{ link.name }}</a><br>
+                 {% endif %}
             {% endfor %}
         </body>
 </html>

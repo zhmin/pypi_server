@@ -10,50 +10,91 @@ from settings import pkg_dir, pkg_href_prefix, PYPI_SERVER_URL
 from pypi_page import get_hrefs_from_html
 
 
-def find_package(pkg_name):
-    specify_dir = os.path.join(pkg_dir, pkg_name.lower())
-    paths = []
-    if os.path.exists(specify_dir):
-        paths = os.listdir(specify_dir)
-    return [Package(pkg_name, p) for p in paths] 
-
-PackageInfo = namedtuple('PackageInfo', ['name', 'version', 'suffix', 'md5'])
-
-def parse_pkg_name(pkg_name):
-    path, _, encrypt = pkg_name.partition('#')
-    md5 = None
-    if encrypt.startswith('md5='):
-        _, md5 = encrypt.split('=')
-    suffix = None
-    if path.endswith('.tar.gz'):
-        suffix = '.tar.gz'
-        path = path.rstrip('.tar.gz')
-    name, _, version = path.partition('-')
-    return PackageInfo(name, version, suffix, md5)
-
-    
 class Package(object):
     
-    def __init__(self, pkg_name, filename):
-        self.filename = filename
-        self.pkg_name = pkg_name
+    package_suffix  = ['.tar.gz']
+
+    def __init__(self, path, include_fragment, is_local):
+        self.is_local = is_local
+        self.path = path
+        self.is_local = is_local
+        if include_fragment and '#' not in posixpath.basename(self.path):
+            raise ValueError('%s has no fragment' % path)
+        self.include_fragment =include_fragment
 
     @property
-    def path(self):
-        return os.path.join(pkg_dir, self.pkg_name, self.filename)
+    def fragment(self):
+        if self.include_fragment:
+            return self.path.rsplit('#', 1)[-1]
+        return ''
+
+    @property
+    def name(self):
+        """
+        Flask
+        """
+        return self.filename.rstrip(self.suffix).split('-')[0]
+
+    @property
+    def suffix(self):
+        for suffix in self.package_suffix:
+            if self.filename.endswith(suffix):
+                return suffix
+
+    @property
+    def filename(self):
+        """
+        Flask-0.7.1.tar.gz
+        """
+        basename = posixpath.basename(self.path)
+        if not self.is_local and '#' in basename:
+            basename, _ = basename.rsplit('#', 1)
+        return basename
 
     @property
     def version(self):
-        return parse_pkg_version(self.link)
+        """
+        0.7.1
+        """
+        return self.filename.rstrip(self.suffix).split('-')[1]
 
     @property
-    def link(self):
-        return pkg_href_prefix + os.path.join(self.pkg_name, self.filename) + '#md5=' + self.md5_value
+    def url(self):
+        if self.is_local:
+            return pkg_href_prefix + posixpath.join(self.name.lower(), 
+                            self.filename) + '#md5=' + self.md5
+        else:
+            return self.path
 
     @property
-    def md5_value(self):
-        return md5_cache[self.path]
-    
+    def md5(self):
+        if self.fragment:
+            return self.fragment.lstrip('md5=')
+        if self.is_local:
+            return md5_cache[self.path]
+
+    @classmethod
+    def from_local_path(cls, path):
+        """
+        package/flask/Flask-0.7.1.tar.gz
+        """
+        return cls(path, include_fragment=False, is_local=True)
+
+    @classmethod
+    def from_pypi_href(cls, path):
+        """
+        https://pypi.python.org/packages/source/F/Flask/Flask-0.7.1.tar.gz
+        #md5=4705d31035839dec320a1fd76ac2fa30
+        """
+        return cls(path, include_fragment=True, is_local=False)
+
+    @classmethod
+    def from_filename(cls, path):
+        """
+        Flask-0.7.1.tar.gz
+        """
+        return cls(path, include_fragment=False, is_local=False)
+
 
 class Md5Cache(dict):
     def __init__(self, size):
@@ -73,6 +114,23 @@ class Md5Cache(dict):
 md5_cache = Md5Cache(100)
 
 
+def find_package(pkg_name, version):
+    specify_dir = os.path.join(pkg_dir, pkg_name.lower())
+    paths = []
+    if os.path.exists(specify_dir):
+        paths = os.listdir(specify_dir)
+    for path in paths:
+        package = Package.from_local_path(os.path.join(specify_dir, path))
+        if package.version == version:
+            return package
+
+def find_match_link(anchor_tags, dst_version):
+    for anchor in anchor_tags:
+        pkg = Package.from_pypi_href(anchor.href)
+        if pkg.version == dst_version:
+            return anchor.href
+
+            
 egg_info_re = re.compile(r'([\w.]+)-([\w.!+-]+)')
 
 def parse_pkg_version(url, search_name):
@@ -104,4 +162,10 @@ def ensure_dir(dirpath):
 
 if __name__ == "__main__":
     url = u'https://pypi.python.org/../packages/source/F/Flask/Flask-0.8.tar.gz#md5=a5169306cfe49b3b369086f2a63816ab'
-    print parse_pkg_version(url, 'flask')
+    package =  Package.from_pypi_href(url)
+    print package.name
+    print package.suffix
+    print package.filename
+    print package.version
+    print package.url
+    print package.md5
