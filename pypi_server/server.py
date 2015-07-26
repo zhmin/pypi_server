@@ -54,7 +54,7 @@ class DownloadPakcageHandler(RequestHandler):
     def get(self, pkg_path):
         # get pypi server package url
         package = Package.from_filename(pkg_path.rstrip('/'))
-        html = yield html_cache.get(package.name)
+        html = yield html_cache.get(package.name.lower())
 
         if not package.is_downloading:
             local_pkg = find_package(package.name, package.version)
@@ -73,7 +73,6 @@ class DownloadPakcageHandler(RequestHandler):
 
                 package = Package.from_pypi_href(url)
                 readwriter = download_packages.get_file(package.filename)
-                print id(readwriter)
                 
                 def data_received(readwriter, chunk):
                     self.request.connection.write(chunk)
@@ -83,7 +82,6 @@ class DownloadPakcageHandler(RequestHandler):
                     self.request.connection.write(header_line)
 
                 client = AsyncHTTPClient()
-                print url
                 yield client.fetch(url, connect_timeout=20 * 60, request_timeout= 20 * 60, 
                                     header_callback=header_received, 
                                     streaming_callback=partial(data_received, readwriter))

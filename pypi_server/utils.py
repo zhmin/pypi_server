@@ -136,7 +136,6 @@ class PackageReadWriter(object):
             self.file = open(self.filepath, 'r+')
         self.file.seek(pos)
         data = self.file.read(size)
-        print pos, self.total_size
         if not data and pos >= self.total_size:
             return None
         return data

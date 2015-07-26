@@ -74,7 +74,7 @@ class HtmlPageCache(object):
             raise gen.Return(response.body)
 
 
-html_cache = HtmlPageCache(size=2)
+html_cache = HtmlPageCache()
             
 
 def get_package_url(name):
