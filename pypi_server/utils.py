@@ -208,7 +208,7 @@ def split_package_name(name):
     
 def ensure_dir(dirpath):
     if not os.path.exists(dirpath):
-        os.mkdirs(dirpath)
+        os.makedirs(dirpath)
 
 if __name__ == "__main__":
     url = u'https://pypi.python.org/../packages/source/F/Flask/Flask-0.8.tar.gz#md5=a5169306cfe49b3b369086f2a63816ab'
