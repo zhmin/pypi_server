@@ -1,18 +1,19 @@
 import os
 import urlparse
 import md5
-import requests
+from functools import partial
+
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler, StaticFileHandler, Application, asynchronous
 from tornado.httpclient import AsyncHTTPClient
 from tornado import gen
 import tornado.options
-from tornado.httpclient import AsyncHTTPClient
 
 from settings import pkg_dir, Template, PYPI_SERVER_URL
 from utils import find_package, Package, ensure_dir, find_match_link
 from pypi_page import html_cache, get_hrefs_from_html, get_package_url
+from state import download_packages
 
 tornado.options.parse_command_line()
 
@@ -47,50 +48,79 @@ class SimplePackageHandler(RequestHandler):
 
 
 class DownloadPakcageHandler(RequestHandler):
+
     @gen.coroutine
+    @asynchronous
     def get(self, pkg_path):
         # get pypi server package url
         package = Package.from_filename(pkg_path.rstrip('/'))
-        
-        local_pkg = find_package(package.name, package.version)
-        if local_pkg:
-            redirect_url = os.path.join('/download/', local_pkg.name.lower(), package.filename)
-            self.redirect(redirect_url)
-            raise gen.Return()
-
-        pkg_url = get_package_url(package.name)
         html = yield html_cache.get(package.name)
-        anchor_tags =  get_hrefs_from_html(html, exp='*.tar.gz',
-                                    match_type='fnmatch')
-        href = find_match_link(anchor_tags, package.version)
-        url = urlparse.urljoin(pkg_url, href)
 
-        package = Package.from_pypi_href(url)
-        directory = os.path.join('packages', package.name.lower())
-        ensure_dir(directory)
-        filepath = os.path.join(directory, package.filename)
-        f = open(filepath, 'wb')
-        
-        def data_received(chunk):
-            self.request.connection.write(chunk)
-            f.write(chunk)
+        if not package.is_downloading:
+            local_pkg = find_package(package.name, package.version)
+            if local_pkg:
+                # if local server exsits, redirect
+                redirect_url = os.path.join('/download/', local_pkg.name.lower(), package.filename)
+                self.redirect(redirect_url)
+                raise gen.Return()
+            else:
+                # not download yet
+                pkg_url = get_package_url(package.name)
+                anchor_tags =  get_hrefs_from_html(html, exp='*.tar.gz',
+                                            match_type='fnmatch')
+                href = find_match_link(anchor_tags, package.version)
+                url = urlparse.urljoin(pkg_url, href)
 
-        def header_received(header_line):
-            self.request.connection.write(header_line)
+                package = Package.from_pypi_href(url)
+                readwriter = download_packages.get_file(package.filename)
+                print id(readwriter)
+                
+                def data_received(readwriter, chunk):
+                    self.request.connection.write(chunk)
+                    readwriter.write(readwriter.current_size, chunk)
 
-        client = AsyncHTTPClient()
-        yield client.fetch(url, connect_timeout=20 * 60, request_timeout= 20 * 60, 
-                header_callback=header_received, streaming_callback=data_received)
-        
-        f.close()
+                def header_received(header_line):
+                    self.request.connection.write(header_line)
 
-        with open(filepath) as f:
-            file_md5 = md5.new(f.read()).hexdigest()
-        if file_md5 == package.md5:
-            self.request.finish()
+                client = AsyncHTTPClient()
+                print url
+                yield client.fetch(url, connect_timeout=20 * 60, request_timeout= 20 * 60, 
+                                    header_callback=header_received, 
+                                    streaming_callback=partial(data_received, readwriter))
+                
+                readwriter.close()
+                readwriter.write_done = True
+                filepath = os.path.join('packages', package.name.lower(), package.filename)
+
+                # md5 file check
+                with open(filepath) as f:
+                    file_md5 = md5.new(f.read()).hexdigest()
+                if file_md5 == package.md5:
+                    self.request.connection.close()
+                    download_packages.remove_file(package.filename)
+                else:
+                    os.remove(filepath)
+                    self.send_error(status_code=500, reason='downlaod file damaged')
         else:
-            os.remove(filepath)
-            self.send_error(status_code=500, reason='downlaod file damaged')
+            # package downloading
+            self.set_status(200)
+            self.set_header("Content-Type", "application/octet-stream")
+            # self.set_header("Content-Length", content_length)
+            readwriter = download_packages.get_file(package.filename)
+            print id(readwriter)
+
+            def read_chunk(readwriter, pos, chunk_size= 200*1024):
+                chunk = readwriter.read(pos, chunk_size)
+                if chunk is None:
+                    print chunk
+                    self.finish()
+                    readwriter.close()
+                else:
+                    pos += len(chunk)
+                    self.write(chunk)
+                    IOLoop.current().call_later(0.5, read_chunk, readwriter, pos)
+
+            IOLoop.current().call_later(0.5, read_chunk, readwriter, 0)
 
 
 def main():

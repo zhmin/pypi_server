@@ -1,14 +1,13 @@
 import os
 import re
 import posixpath
-import collections
 import md5
 import urlparse
-from collections import namedtuple
-import requests
+from collections import namedtuple, deque
+
 from settings import pkg_dir, pkg_href_prefix, PYPI_SERVER_URL
 from pypi_page import get_hrefs_from_html
-
+import state
 
 class Package(object):
     
@@ -69,9 +68,13 @@ class Package(object):
     @property
     def md5(self):
         if self.fragment:
-            return self.fragment.lstrip('md5=')
+            return self.fragment.split('=')[1]
         if self.is_local:
             return md5_cache[self.path]
+
+    @property
+    def is_downloading(self):
+        return self.filename in state.download_packages
 
     @classmethod
     def from_local_path(cls, path):
@@ -100,7 +103,7 @@ class Md5Cache(dict):
     def __init__(self, size):
         super(Md5Cache, self).__init__()
         self.size = size
-        self.queue = collections.deque()
+        self.queue = deque()
 
     def __missing__(self, key):
         with open(key) as f:
@@ -112,6 +115,54 @@ class Md5Cache(dict):
         return self[key]
         
 md5_cache = Md5Cache(100)
+
+
+class PackageReadWriter(object):
+
+    def __init__(self, filepath):
+        self.filepath = filepath
+        self.file = open(filepath, 'w+')
+        self.write_size = 0
+        self.write_done = False
+        self.is_close = False
+
+    def read(self, pos, size):
+        '''
+        return value:
+            None, no more data
+            '', more data not come
+        '''
+        if self.is_close:
+            self.file = open(self.filepath, 'r+')
+        self.file.seek(pos)
+        data = self.file.read(size)
+        print pos, self.total_size
+        if not data and pos >= self.total_size:
+            return None
+        return data
+
+    def write(self, pos, data):
+        self.file.seek(pos)
+        self.file.write(data)
+        self.write_size += len(data)
+
+    def flush(self):
+        self.file.flush()
+
+    def close(self):
+        self.is_close = True
+        self.file.close()
+
+    @property
+    def total_size(self):
+        if self.write_done:
+            return self.write_size
+        else:
+            return float('inf')
+
+    @property
+    def current_size(self):
+        return self.write_size
 
 
 def find_package(pkg_name, version):
@@ -130,7 +181,7 @@ def find_match_link(anchor_tags, dst_version):
         if pkg.version == dst_version:
             return anchor.href
 
-            
+
 egg_info_re = re.compile(r'([\w.]+)-([\w.!+-]+)')
 
 def parse_pkg_version(url, search_name):
@@ -162,10 +213,12 @@ def ensure_dir(dirpath):
 
 if __name__ == "__main__":
     url = u'https://pypi.python.org/../packages/source/F/Flask/Flask-0.8.tar.gz#md5=a5169306cfe49b3b369086f2a63816ab'
+    url = 'https://pypi.python.org/packages/source/F/Flask/Flask-0.6.tar.gz#md5=55a5222123978c8c16dae385724c0f3a'
     package =  Package.from_pypi_href(url)
     print package.name
     print package.suffix
     print package.filename
+    print package.fragment
     print package.version
     print package.url
     print package.md5

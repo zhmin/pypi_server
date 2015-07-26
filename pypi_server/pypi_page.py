@@ -54,7 +54,7 @@ class HtmlPageCache(object):
     def get(self, name):
         if name not in self.cache:
             html = yield self.fetch_impl(name)
-            self.cache[name] = {'html': html, 'deadline': time.time() + 24*60*60}
+            self.cache[name] = {'html': html, 'deadline': time.time() + 1*60*60}
         else:
             value = self.cache[name]
             del self.cache[name]
