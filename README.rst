@@ -6,7 +6,7 @@
 
 .. code:: shell
 
-    pip install -i server_url package
+    pip install -i server_url/simple package
 
 原理
 ----
